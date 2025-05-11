@@ -7,6 +7,7 @@ require 'vendor/autoload.php';
 use Cloudinary\Cloudinary;
 use Cloudinary\Configuration\Configuration;
 use Cloudinary\Api\Upload\UploadApi;
+use Cloudinary\Api\Admin\AdminApi;
 
 // Cloudinary configuration
 Configuration::instance([
@@ -20,32 +21,28 @@ Configuration::instance([
     ]
 ]);
 
-$cloudinary = new Cloudinary();
+// Create API instances
+$uploadApi = new UploadApi();
+$adminApi = new AdminApi();
+
 $pdo = connectToDatabase();
 
-// Check if the user is logged in
+// Authentication check
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(["success" => false, "message" => "Unauthorized"]);
     exit;
 }
 
-// Handle GET request (fetch products)
+// GET: Fetch product(s)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Check if a specific product ID is requested
     if (isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($product) {
-            echo json_encode(["success" => true, "data" => $product]);
-        } else {
-            echo json_encode(["success" => false, "message" => "Product not found"]);
-        }
+        echo json_encode($product ? ["success" => true, "data" => $product] : ["success" => false, "message" => "Product not found"]);
         exit;
     }
 
-    // Handle search parameter
     $search = $_GET['search'] ?? '';
     $stmt = $pdo->prepare("SELECT * FROM products WHERE name LIKE ? ORDER BY id DESC");
     $stmt->execute(["%$search%"]);
@@ -53,113 +50,154 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
-// Handle POST request (create new product)
+// POST: Create product
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check if this is actually a PUT or DELETE request using POST method override
+    $method = $_POST['_method'] ?? '';
+
+    if ($method === 'PUT') {
+        handleUpdateProduct($_POST, $_FILES);
+        exit;
+    } else if ($method === 'DELETE') {
+        handleDeleteProduct($_POST);
+        exit;
+    }
+
+    // Standard POST handling
     $name = trim($_POST['name'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $quantity = intval($_POST['quantity'] ?? 0);
     $unit_price = floatval($_POST['unit_price'] ?? 0);
 
+    // Validate input
     if (!$name || $quantity < 0 || $unit_price < 0) {
-        echo json_encode(["success" => false, "message" => "Name, quantity, and price are required and must be valid."]);
+        echo json_encode(["success" => false, "message" => "Name, quantity, and unit price are required and must be valid."]);
         exit;
     }
 
     try {
-        // Handle image upload to Cloudinary if present
+        // Process file upload
         $image_url = null;
-        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-            $uploadApi = new UploadApi();
+        if (!empty($_FILES['image']['tmp_name']) && $_FILES['image']['error'] === 0) {
             $result = $uploadApi->upload($_FILES['image']['tmp_name'], [
                 'folder' => 'products/',
                 'resource_type' => 'image'
             ]);
-
-            if (isset($result['secure_url'])) {
-                $image_url = $result['secure_url'];
-            }
+            $image_url = $result['secure_url'] ?? null;
         }
 
-        // Insert new product
+        // Insert into DB
         $stmt = $pdo->prepare("INSERT INTO products (name, description, quantity, unit_price, image_url) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$name, $description, $quantity, $unit_price, $image_url]);
-
-        echo json_encode(["success" => true, "message" => "Product added successfully."]);
-    } catch (PDOException $e) {
-        $errorMessage = "Database error: " . $e->getMessage();
-        error_log($errorMessage);
-        echo json_encode(["success" => false, "message" => "Failed to add product. Please try again later."]);
+        echo json_encode([
+            "success" => true,
+            "message" => "Product added successfully.",
+            "product_id" => $pdo->lastInsertId()
+        ]);
+    } catch (Exception $e) {
+        error_log("Error: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Error adding product: " . $e->getMessage()]);
     }
     exit;
 }
 
-// Handle PUT request (update existing product)
-if ($_SERVER['REQUEST_METHOD'] === 'PUT' || (isset($_POST['_method']) && $_POST['_method'] === 'PUT')) {
-    // Support for form-data PUT method via POST with _method field
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_method']) && $_POST['_method'] === 'PUT') {
-        $putData = $_POST;
-        $files = $_FILES;
-    } else {
-        parse_str(file_get_contents("php://input"), $putData);
-        $files = null;
-    }
+// PUT: Update product
+if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    parse_str(file_get_contents("php://input"), $putData);
+    handleUpdateProduct($putData, null);
+    exit;
+}
 
-    $id = $putData['id'] ?? '';
-    $name = trim($putData['name'] ?? '');
-    $description = trim($putData['description'] ?? '');
-    $quantity = intval($putData['quantity'] ?? 0);
-    $unit_price = floatval($putData['unit_price'] ?? 0);
+// DELETE: Remove product
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    parse_str(file_get_contents("php://input"), $deleteData);
+    handleDeleteProduct($deleteData);
+    exit;
+}
 
+// Unsupported request
+echo json_encode(["success" => false, "message" => "Unsupported request method."]);
+exit;
+
+/**
+ * Handle product update
+ *
+ * @param array $data Request data
+ * @param array|null $files Files data if using POST
+ * @return void
+ */
+function handleUpdateProduct($data, $files = null) {
+    global $pdo, $uploadApi;
+
+    $id = $data['id'] ?? '';
+    $name = trim($data['name'] ?? '');
+    $description = trim($data['description'] ?? '');
+    $quantity = isset($data['quantity']) ? intval($data['quantity']) : -1;
+    $unit_price = isset($data['unit_price']) ? floatval($data['unit_price']) : -1;
+
+    // Validate required fields
     if (!$id || !$name || $quantity < 0 || $unit_price < 0) {
-        echo json_encode(["success" => false, "message" => "All fields are required and must be valid."]);
+        echo json_encode(["success" => false, "message" => "Invalid product data. All fields are required."]);
         exit;
     }
 
     try {
-        // Handle image upload if present
-        $image_url = null;
-        $image_clause = "";
-        $params = [$name, $description, $quantity, $unit_price];
+        // First check if product exists
+        $checkStmt = $pdo->prepare("SELECT * FROM products WHERE id = ?");
+        $checkStmt->execute([$id]);
+        $product = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($files && isset($files['image']) && $files['image']['error'] == 0) {
-            $uploadApi = new UploadApi();
+        if (!$product) {
+            echo json_encode(["success" => false, "message" => "Product not found."]);
+            exit;
+        }
+
+        $image_clause = '';
+        $params = [$name, $description, $quantity, $unit_price];
+        $old_image_url = $product['image_url'] ?? null;
+
+        // Handle image upload for POST method
+        if ($files && isset($files['image']) && $files['image']['error'] === 0 && !empty($files['image']['tmp_name'])) {
             $result = $uploadApi->upload($files['image']['tmp_name'], [
                 'folder' => 'products/',
                 'resource_type' => 'image'
             ]);
 
-            if (isset($result['secure_url'])) {
-                $image_url = $result['secure_url'];
+            if (!empty($result['secure_url'])) {
                 $image_clause = ", image_url = ?";
-                $params[] = $image_url;
+                $params[] = $result['secure_url'];
+
+                // We have a new image, so we should clean up the old one later
+                // (this would happen in a separate function if we were properly
+                // tracking public_ids)
             }
         }
 
-        // Add ID to params array
         $params[] = $id;
-
-        // Update product
         $stmt = $pdo->prepare("UPDATE products SET name = ?, description = ?, quantity = ?, unit_price = ?" . $image_clause . " WHERE id = ?");
         $stmt->execute($params);
 
-        echo json_encode(["success" => true, "message" => "Product updated successfully."]);
-    } catch (PDOException $e) {
-        $errorMessage = "Database error: " . $e->getMessage();
-        error_log($errorMessage);
-        echo json_encode(["success" => false, "message" => "Failed to update product. Please try again later."]);
+        echo json_encode([
+            "success" => true,
+            "message" => "Product updated successfully.",
+            "affected_rows" => $stmt->rowCount()
+        ]);
+    } catch (Exception $e) {
+        error_log("Error updating product: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Error updating product: " . $e->getMessage()]);
     }
-    exit;
 }
 
-// Handle DELETE request (delete a product)
-if ($_SERVER['REQUEST_METHOD'] === 'DELETE' || (isset($_POST['_method']) && $_POST['_method'] === 'DELETE')) {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_method']) && $_POST['_method'] === 'DELETE') {
-        $deleteData = $_POST;
-    } else {
-        parse_str(file_get_contents("php://input"), $deleteData);
-    }
+/**
+ * Handle product deletion
+ *
+ * @param array $data Request data
+ * @return void
+ */
+function handleDeleteProduct($data) {
+    global $pdo, $adminApi;
 
-    $id = $deleteData['id'] ?? '';
+    $id = $data['id'] ?? '';
 
     if (!$id) {
         echo json_encode(["success" => false, "message" => "Product ID is required."]);
@@ -167,29 +205,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' || (isset($_POST['_method']) && $_PO
     }
 
     try {
-        // Fetch the current image URL (optional: to delete from Cloudinary later)
-        $stmt = $pdo->prepare("SELECT image_url FROM products WHERE id = ?");
+        // Begin transaction
+        $pdo->beginTransaction();
+
+        // First get the product to check if it exists and get image info
+        $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ?");
         $stmt->execute([$id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
-        $current_image_url = $product['image_url'] ?? null;
 
-        // Delete the product
+        if (!$product) {
+            echo json_encode(["success" => false, "message" => "Product not found."]);
+            $pdo->rollBack();
+            exit;
+        }
+
+        // Delete the product from the database
         $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
         $stmt->execute([$id]);
 
-        // Optional: Delete the image from Cloudinary
-        // This would require additional Cloudinary API implementation
+        // Check if deletion was successful
+        if ($stmt->rowCount() === 0) {
+            echo json_encode(["success" => false, "message" => "Failed to delete product."]);
+            $pdo->rollBack();
+            exit;
+        }
 
-        echo json_encode(["success" => true, "message" => "Product deleted successfully."]);
-    } catch (PDOException $e) {
-        $errorMessage = "Database error: " . $e->getMessage();
-        error_log($errorMessage);
-        echo json_encode(["success" => false, "message" => "Failed to delete product. Please try again later."]);
+        // Commit transaction
+        $pdo->commit();
+
+        // Attempt to clean up Cloudinary image if it exists
+        // This would be more robust if we stored public_ids in the database
+        if (!empty($product['image_url'])) {
+            // Note: This is a best effort cleanup. The URL doesn't contain the public_id in a reliable way,
+            // so a proper implementation would store the public_id in the database.
+            try {
+                $urlParts = parse_url($product['image_url']);
+                $pathParts = explode('/', trim($urlParts['path'], '/'));
+
+                // Remove the version number and file extension
+                $publicIdParts = [];
+                $captureStarted = false;
+
+                foreach ($pathParts as $part) {
+                    // Skip until we find "products" folder
+                    if ($part === 'products') {
+                        $captureStarted = true;
+                        $publicIdParts[] = $part;
+                        continue;
+                    }
+
+                    if ($captureStarted) {
+                        // Add each part except the last one (filename with extension)
+                        if (next($pathParts) !== false) {
+                            $publicIdParts[] = $part;
+                        } else {
+                            // For the last part, remove the file extension
+                            $publicIdParts[] = pathinfo($part, PATHINFO_FILENAME);
+                        }
+                    }
+                }
+
+                $publicId = implode('/', $publicIdParts);
+
+                if (!empty($publicId)) {
+                    // Best effort to delete the image
+                    $adminApi->deleteAssets([$publicId], ['resource_type' => 'image']);
+                }
+            } catch (Exception $e) {
+                // Log but don't fail if image deletion fails
+                error_log("Failed to delete Cloudinary image: " . $e->getMessage());
+            }
+        }
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Product deleted successfully."
+        ]);
+    } catch (Exception $e) {
+        // Roll back transaction on error
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        error_log("Error deleting product: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Error deleting product: " . $e->getMessage()]);
     }
-    exit;
 }
-
-// If we reach here, it means the request method is not supported
-echo json_encode(["success" => false, "message" => "Request method not supported"]);
-exit;
 ?>

@@ -103,6 +103,9 @@ if (!isset($_SESSION['user_id'])) {
     <a href="#categories" class="nav-link" data-page="categories">
         <i class="fas fa-list" style="margin-right: 10px;"></i>Categories
     </a>
+    <a href="#products" class="nav-link" data-page="products">
+        <i class="fas fa-box" style="margin-right: 10px;"></i>Products
+    </a>
     <a href="#profile" class="nav-link" data-page="profile">
         <i class="fas fa-user" style="margin-right: 10px;"></i>Profile
     </a>
@@ -131,7 +134,7 @@ if (!isset($_SESSION['user_id'])) {
 </div>
 
 <script src="categories.js"></script>
-
+<script src="products.js"></script>
 <script>
 // Page routing system
 const routes = {
@@ -142,6 +145,10 @@ const routes = {
     categories: {
         title: 'Categories',
         load: loadCategoriesContent
+    },
+    products: {
+        title: 'Products',
+        load: loadProductsContent
     },
     profile: {
         title: 'Profile',

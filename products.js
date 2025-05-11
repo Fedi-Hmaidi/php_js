@@ -44,7 +44,7 @@ function loadProductsContent() {
                 </div>
                 <form id="productForm" enctype="multipart/form-data">
                     <input type="hidden" id="product_id" name="id">
-                    <input type="hidden" id="formAction" name="_method" value="POST">
+                    <input type="hidden" id="_method" name="_method" value="POST">
 
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 5px; font-weight: bold;">Product Name*</label>
@@ -235,7 +235,7 @@ function displayProducts(products) {
 function openAddProductModal() {
     resetProductForm();
     document.getElementById('productModalTitle').textContent = 'Add New Product';
-    document.getElementById('formAction').value = 'POST';
+    document.getElementById('_method').value = 'POST';
     document.getElementById('productModal').style.display = 'block';
 }
 
@@ -243,7 +243,7 @@ function openAddProductModal() {
 function openEditProductModal(productId) {
     resetProductForm();
     document.getElementById('productModalTitle').textContent = 'Edit Product';
-    document.getElementById('formAction').value = 'PUT';
+    document.getElementById('_method').value = 'PUT'; // Set _method to PUT for edit
     document.getElementById('product_id').value = productId;
 
     // Fetch product details
@@ -253,7 +253,7 @@ function openEditProductModal(productId) {
             if (data.success && data.data) {
                 const product = data.data;
                 document.getElementById('name').value = product.name;
-                document.getElementById('description').value = product.description;
+                document.getElementById('description').value = product.description || '';
                 document.getElementById('quantity').value = product.quantity;
                 document.getElementById('unit_price').value = product.unit_price;
 
@@ -283,3 +283,113 @@ function openDeleteConfirmation(productId) {
     };
 }
 
+// Close product modal
+function closeProductModal() {
+    document.getElementById('productModal').style.display = 'none';
+}
+
+// Reset product form
+function resetProductForm() {
+    document.getElementById('productForm').reset();
+    document.getElementById('product_id').value = '';
+    document.getElementById('imagePreviewContainer').style.display = 'none';
+    document.getElementById('imagePreview').src = '';
+}
+
+// Handle image preview
+function handleImagePreview(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('imagePreviewContainer').style.display = 'block';
+            document.getElementById('imagePreview').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+    }
+}
+
+// Handle product form submission
+function handleProductSubmit(e) {
+    e.preventDefault();
+
+    const form = document.getElementById('productForm');
+    const formData = new FormData(form);
+    const method = formData.get('_method');
+
+    // For debugging
+    console.log('Submitting form with method:', method);
+    console.log('Product ID:', formData.get('id'));
+
+    // Show loading state
+    const saveButton = document.getElementById('saveProductBtn');
+    const originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveButton.disabled = true;
+
+    // Send request to the server
+    fetch('products_action.php', {
+        method: 'POST', // Always POST for FormData
+        body: formData // Includes _method for PUT/DELETE handling on server
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeProductModal();
+            loadAllProducts(); // Reload products list
+
+            // Show success message
+            alert(data.message);
+        } else {
+            alert(data.message || 'Failed to save product.');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving product:', error);
+        alert('Failed to save product. Please try again.');
+    })
+    .finally(() => {
+        // Reset button state
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    });
+}
+
+// Delete a product
+function deleteProduct(productId) {
+    const formData = new FormData();
+    formData.append('id', productId);
+    formData.append('_method', 'DELETE');
+
+    // Show loading state
+    const deleteButton = document.getElementById('confirmDeleteBtn');
+    const originalText = deleteButton.innerHTML;
+    deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    deleteButton.disabled = true;
+
+    fetch('products_action.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+            loadAllProducts(); // Reload products list
+            alert(data.message);
+        } else {
+            alert(data.message || 'Failed to delete product.');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting product:', error);
+        alert('Failed to delete product. Please try again.');
+    })
+    .finally(() => {
+        // Reset button state
+        deleteButton.innerHTML = originalText;
+        deleteButton.disabled = false;
+    });
+}
