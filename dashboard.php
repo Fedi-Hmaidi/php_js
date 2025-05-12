@@ -133,8 +133,9 @@ if (!isset($_SESSION['user_id'])) {
     </div>
 </div>
 
-<script src="categories.js"></script>
-<script src="products.js"></script>
+
+<script  src="categories.js"></script>
+<script  src="products.js"></script>
 <script>
 // Page routing system
 const routes = {

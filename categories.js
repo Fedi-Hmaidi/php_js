@@ -5,7 +5,6 @@ let currentPage = 1;
 let itemsPerPage = 5;
 let allCategories = [];
 let filteredCategories = [];
-
 // Load categories into the dashboard
 function loadCategoriesContent() {
     document.getElementById("mainContent").innerHTML = `
@@ -91,7 +90,7 @@ function loadCategoriesContent() {
 }
 
 // Fetch categories from the server
-function fetchCategories() {
+ function fetchCategories() {
     fetch("categories_action.php")
         .then((response) => response.json())
         .then((data) => {
@@ -449,3 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial load of categories content
     loadCategoriesContent();
 });
+
+
+//export const test = allCategories
