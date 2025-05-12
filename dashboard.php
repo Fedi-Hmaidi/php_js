@@ -110,9 +110,6 @@ if (!isset($_SESSION['user_id'])) {
     <a href="#profile" class="nav-link" data-page="profile">
         <i class="fas fa-user" style="margin-right: 10px;"></i>Profile
     </a>
-    <a href="#settings" class="nav-link" data-page="settings">
-        <i class="fas fa-cog" style="margin-right: 10px;"></i>Settings
-    </a>
     <a href="logout.php">
         <i class="fas fa-sign-out-alt" style="margin-right: 10px;"></i>Logout
     </a>
@@ -158,14 +155,36 @@ const routes = {
     },
 };
 
+let user_roleee = "";
+
+
 // Dashboard content
 function loadDashboardContent() {
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error("Token not found in localStorage.");
+        return;
+    }
+
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const decoded = JSON.parse(jsonPayload);
+        userRole = decoded?.role || "";
+        user_roleee = userRole
+        console.log(user_role, "category")
+
+
     console.log("Loading dashboard content...");
 
 document.getElementById('mainContent').innerHTML = `
     <div style="padding: 20px;">
         <h1>Dashboard</h1>
-        <div style="margin-top: 30px; background-color: white; padding: 20px; border-radius: 8px;">
+    ${user_role == "admin" ? `    <div style="margin-top: 30px; background-color: white; padding: 20px; border-radius: 8px;">
             <h2>Users Who Placed Orders</h2>
             <table id="usersTable" border="1" style="width: 100%; border-collapse: collapse;">
                 <thead>
@@ -178,7 +197,7 @@ document.getElementById('mainContent').innerHTML = `
                 <tbody></tbody>
             </table>
             <div id="usersError" style="color: red; display: none;"></div>
-        </div>
+        </div> ` : ''}
 
         <div style="margin-top: 30px; background-color: white; padding: 20px; border-radius: 8px;">
             <h2>Top Selling Products</h2>
@@ -359,16 +378,25 @@ function loadProfileContent() {
                     <form id="profileForm">
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; margin-bottom: 5px; font-weight: bold;">Email</label>
-                            <input type="email" value="${user.email}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                            <input  id="email" type="email" value="${user.email}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; margin-bottom: 5px; font-weight: bold;">Full Name</label>
-                            <input type="text" value="${user.user_name}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                            <input type="text"   id="username" value="${user.username}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                        </div>
+                         <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Phone number</label>
+                            <input type="text" id="phone_number" value="${user.phone_number}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; margin-bottom: 5px; font-weight: bold;">Password</label>
-                            <input type="password" value="" placeholder="Enter new password" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                            <input type="password" id="password" value="" placeholder="Enter new password" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
                         </div>
+                           <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Address</label>
+                            <input type="text"  id="address" value="${user.address}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                        </div>
+
                         <button type="button" onclick="updateProfile()" style="padding: 8px 16px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
                             Update Profile
                         </button>
@@ -388,14 +416,50 @@ function loadProfileContent() {
         <p>Error loading profile. Please try again later.</p>
       `;
     });
-}
+}function updateProfile() {
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const phone_number = document.getElementById('phone_number').value.trim();
+    const address = document.getElementById('address').value.trim();
+    const password = document.getElementById('password').value.trim(); // Optional
 
+    const payload = {
+        username: username,
+        email: email,
+        phone_number: phone_number,
+        address: address
+    };
+
+    if (password !== '') {
+        payload.password = password;
+    }
+
+    fetch('update_user.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(result.message);
+        } else {
+            alert("Error: " + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("An error occurred while updating the profile.");
+    });
+}
 
 function loadUsersWhoOrdered() {
     fetch('orders_action.php?users_who_ordered=1')
         .then(response => response.json())
         .then(data => {
-            console.log(data, "dataxxxxxxxxx")
+            console.log(data, "")
             const tableBody = document.querySelector('#usersTable tbody');
             const errorElement = document.getElementById('usersError');
 

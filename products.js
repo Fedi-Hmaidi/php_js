@@ -5,28 +5,51 @@
  */
 // Function to load the Products content
 
+let rolee  = ""
+
+
+function show() {
+  const addProductBtn = document.getElementById('addProductBtn');
+  if (rolee === 'admin') {
+    addProductBtn.style.display = 'inline-block';
+  } else {
+    addProductBtn.style.display = 'none';
+  }
+}
+
+
 
 function loadProductsContent() {
 
+  const token = localStorage.getItem('token');
+  if (!token) {
+      console.error("Token not found in localStorage.");
+      return;
+  }
 
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const decoded = JSON.parse(jsonPayload);
+      userRole = decoded?.role || "";
+      rolee = userRole
   document.getElementById("mainContent").innerHTML = `
         <div style="padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h1>Products</h1>
-                <button id="addProductBtn" style="padding: 10px 16px; background-color: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center;">
-                    <i class="fas fa-plus" style="margin-right: 8px;"></i> Add Product
-                </button>
+                ${rolee === "admin" ? `
+                  <button id="addProductBtn" style="padding: 10px 16px; background-color: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center;">
+                      <i class="fas fa-plus" style="margin-right: 8px;"></i> Add Product
+                  </button>
+              ` : ''}
+
             </div>
 
             <!-- Search Bar -->
-            <div style="margin-bottom: 20px; max-width: 500px;">
-                <div style="display: flex;">
-                    <input type="text" id="searchProduct" placeholder="Search products..." style="padding: 8px; border-radius: 4px 0 0 4px; border: 1px solid #ddd; flex-grow: 1;">
-                    <button id="searchProductBtn" style="padding: 8px 12px; background-color: #3498db; color: white; border: none; border-radius: 0 4px 4px 0; cursor: pointer;">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </div>
+            
 
             <!-- Products List -->
             <div id="productsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
@@ -240,6 +263,7 @@ function loadProductsContent() {
   // Initialize products management
   //loadCategories();
   //fetch()
+  show()
 }
 
 
@@ -443,20 +467,20 @@ function displayProducts(products) {
                     </span>
                 </div>
                 <div style="display: flex; justify-content: flex-end; margin-top: 15px; gap: 10px;">
-                    <button class="edit-product-btn" data-id="${
+                     ${rolee == "admin" ?  `   <button class="edit-product-btn" data-id="${
                       product.id
                     }" style="padding: 6px 12px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         <i class="fas fa-edit"></i> Edit
-                    </button>
+                    </button> ` : ''}
 
                      <button class="order-product-btn" data-id="${product.id}" style="padding: 6px 12px; background-color: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer;">
             <i class="fas fa-cart-plus"></i> Order
         </button>
-                    <button class="delete-product-btn" data-id="${
+                  ${rolee == "admin" ?  ` <button class="delete-product-btn" data-id="${
                       product.id
                     }" style="padding: 6px 12px; background-color: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         <i class="fas fa-trash"></i> Delete
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
         `;
@@ -920,13 +944,13 @@ function closeOrderModal() {
 
 
   // Change the order button event from:
-  button.addEventListener("click", function() {
+ /* button.addEventListener("click", function() {
     const productId = this.getAttribute("data-id");
     handleProductOrder(productId);
-  });
+  });*/
 
   // To:
-  button.addEventListener("click", function() {
+/*  button.addEventListener("click", function() {
     const productId = this.getAttribute("data-id");
     openOrderModal(productId);
-  });
+  });*/

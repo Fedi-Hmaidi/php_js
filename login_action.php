@@ -18,12 +18,14 @@ try {
     if ($user && password_verify($password, $user['password'])) {
         $key = bin2hex(random_bytes(32));
         $issuedAt = time();
+        $role=$user['role'];
         $expirationTime = $issuedAt + 3600;
         $payload = array(
             "email" => $user['email'],
             "id" => $user['id'],
             "iat" => $issuedAt,
-            "exp" => $expirationTime
+            "exp" => $expirationTime,
+            "role"=>$role
         );
 
         $jwt = JWT::encode($payload, $key, 'HS256');

@@ -1,19 +1,53 @@
-// categories.js
+
 
 // Global variables for pagination
 let currentPage = 1;
 let itemsPerPage = 5;
 let allCategories = [];
 let filteredCategories = [];
+
+// Extract the role from the token
+let user_role = "";
+
+function showAddCategoryButtonIfAdmin() {
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+    if (user_role === 'admin') {
+        addCategoryBtn.style.display = 'inline-block';
+    } else {
+        addCategoryBtn.style.display = 'none';
+    }
+}
+
 // Load categories into the dashboard
 function loadCategoriesContent() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error("Token not found in localStorage.");
+        return;
+    }
+
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const decoded = JSON.parse(jsonPayload);
+        userRole = decoded?.role || "";
+        user_role = userRole
+        console.log(user_role, "category")
+
+
+
+  //  console.log(userRole)
     document.getElementById("mainContent").innerHTML = `
         <div class="categories-container" style="padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h1>Categories</h1>
-                <button id="addCategoryBtn" style="background-color: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer;">
-                    <i class="fa fa-plus" style="margin-right: 5px;"></i> Add Category
-                </button>
+             <button id="addCategoryBtn" style="background-color: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer;">
+    <i class="fa fa-plus" style="margin-right: 5px;"></i> Add Category
+</button>
+
             </div>
 
             <div class="table-controls" style="display: flex; justify-content: space-between; margin-bottom: 15px;">
@@ -87,6 +121,7 @@ function loadCategoriesContent() {
 
     // Fetch categories data
     fetchCategories();
+    showAddCategoryButtonIfAdmin()
 }
 
 // Fetch categories from the server
@@ -145,14 +180,16 @@ function renderTable() {
                     <td style="padding: 12px 15px; border-bottom: 1px solid #ddd;">${cat.id}</td>
                     <td style="padding: 12px 15px; border-bottom: 1px solid #ddd;">${cat.name}</td>
                     <td style="padding: 12px 15px; border-bottom: 1px solid #ddd;">${cat.description}</td>
-                    <td style="padding: 12px 15px; border-bottom: 1px solid #ddd; text-align: center;">
-                        <button onclick="editCategory(${cat.id})" style="margin-right: 5px; padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            Edit
-                        </button>
-                        <button onclick="deleteCategory(${cat.id})" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            Delete
-                        </button>
-                    </td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #ddd; text-align: center;">
+    ${user_role == "admin" ? `
+        <button onclick="editCategory(${cat.id})" style="margin-right: 5px; padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Edit
+        </button>
+        <button onclick="deleteCategory(${cat.id})" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Delete
+        </button>` : 'N/A'}
+</td>
+
                 </tr>
             `;
         });
@@ -171,6 +208,7 @@ function renderTable() {
     document.getElementById("showingFrom").textContent = from;
     document.getElementById("showingTo").textContent = to;
     document.getElementById("totalItems").textContent = filteredCategories.length;
+
 }
 
 // Handle search input

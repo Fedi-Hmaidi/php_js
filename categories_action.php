@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 // Handle GET request (fetch categories)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $search = $_GET['search'] ?? '';
-    $stmt = $pdo->prepare("SELECT name, (SELECT COUNT(*) FROM products WHERE category_id = categories.id) AS product_count FROM categories WHERE name LIKE ?");
+    $stmt = $pdo->prepare("SELECT name,description,id, (SELECT COUNT(*) FROM products WHERE category_id = categories.id) AS product_count FROM categories WHERE name LIKE ?");
     $stmt->execute(["%$search%"]);
 
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
