@@ -4,7 +4,11 @@
  * Uses Cloudinary for image uploads
  */
 // Function to load the Products content
+
+
 function loadProductsContent() {
+
+
   document.getElementById("mainContent").innerHTML = `
         <div style="padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -35,60 +39,185 @@ function loadProductsContent() {
         </div>
 
         <!-- Product Form Modal -->
-        <div id="productModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-            <div style="background-color: #fefefe; margin: 10% auto; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); max-width: 700px; width: 80%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 id="productModalTitle">Add New Product</h2>
-                    <span id="closeProductModal" style="font-size: 24px; cursor: pointer;">&times;</span>
-                </div>
-                <form id="productForm" enctype="multipart/form-data">
-                    <input type="hidden" id="product_id" name="id">
-                    <input type="hidden" id="_method" name="_method" value="POST">
+      <div id="productModal">
+    <style>
+        #productModal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
 
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Product Name*</label>
-                        <input type="text" id="name" name="name" required style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
+        #productModal .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 700px;
+            width: 80%;
+        }
 
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
 
+        .modal-header h2 {
+            margin: 0;
+        }
 
+        .close-btn {
+            font-size: 24px;
+            cursor: pointer;
+        }
 
+        form input[type="text"],
+        form input[type="number"],
+        form select,
+        form textarea,
+        form input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
 
+        form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
 
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Description</label>
-                        <textarea id="description" name="description" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;"></textarea>
-                    </div>
+        .form-group {
+            margin-bottom: 15px;
+        }
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Quantity*</label>
-                            <input type="number" id="quantity" name="quantity" min="0" required style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-                        </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Unit Price*</label>
-                            <div style="display: flex; align-items: center;">
-                                <span style="padding: 8px 12px; background-color: #f8f9fa; border: 1px solid #ddd; border-right: none; border-radius: 4px 0 0 4px;">$</span>
-                                <input type="number" id="unit_price" name="unit_price" min="0" step="0.01" required style="flex-grow: 1; padding: 8px; border-radius: 0 4px 4px 0; border: 1px solid #ddd;">
-                            </div>
-                        </div>
-                    </div>
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Product Image</label>
-                        <input type="file" id="image" name="image" accept="image/*" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-                        <div id="imagePreviewContainer" style="margin-top: 10px; text-align: center; display: none;">
-                            <img id="imagePreview" src="" alt="Image Preview" style="max-height: 200px; max-width: 100%;">
-                        </div>
-                    </div>
+        .price-input {
+            display: flex;
+            align-items: center;
+        }
 
-                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" id="cancelProductBtn" style="padding: 8px 16px; background-color: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                        <button type="submit" id="saveProductBtn" style="padding: 8px 16px; background-color: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Product</button>
-                    </div>
-                </form>
-            </div>
+        .price-input span {
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .price-input input {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: 0 4px 4px 0;
+            border: 1px solid #ddd;
+        }
+
+        #imagePreviewContainer {
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        #imagePreview {
+            max-height: 200px;
+            max-width: 100%;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #cancelProductBtn {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        #saveProductBtn {
+            background-color: #2ecc71;
+            color: white;
+        }
+    </style>
+
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="productModalTitle">Add New Product</h2>
+            <span id="closeProductModal" class="close-btn">&times;</span>
         </div>
+        <form id="productForm" enctype="multipart/form-data">
+            <input type="hidden" id="product_id" name="id">
+            <input type="hidden" id="_method" name="_method" value="POST">
+
+            <div class="form-group">
+                <label>Product Name*</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Category*</label>
+                <select id="category" name="category_id" required>
+                    <option value="">-- Select Category --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="description" name="description" rows="3"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>Quantity*</label>
+                    <input type="number" id="quantity" name="quantity" min="0" required>
+                </div>
+                <div>
+                    <label>Unit Price*</label>
+                    <div class="price-input">
+                        <span>$</span>
+                        <input type="number" id="unit_price" name="unit_price" min="0" step="0.01" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Product Image</label>
+                <input type="file" id="image" name="image" accept="image/*">
+                <div id="imagePreviewContainer">
+                    <img id="imagePreview" src="" alt="Image Preview">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" id="cancelProductBtn">Cancel</button>
+                <button type="submit" id="saveProductBtn">Save Product</button>
+            </div>
+        </form>
+    </div>
+</div>
 
         <!-- Delete Confirmation Modal -->
         <div id="deleteConfirmModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
@@ -106,9 +235,65 @@ function loadProductsContent() {
         `;
 
 
+  initProductsManagement();
 
   // Initialize products management
-  initProductsManagement();
+  //loadCategories();
+  //fetch()
+}
+
+
+function loadCategories() {
+  const categorySelect = document.getElementById("category");
+  categorySelect.innerHTML = '<option value="">-- Select Category --</option>';
+
+  fetch("categories_action.php", {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+  })
+    .then((response) => {
+      // Check if the response is ok (status in the range 200-299)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      // Try parsing as JSON
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Received categories:", data);
+
+      // More robust checking for valid category data
+      if (data && Array.isArray(data) && data.length > 0) {
+        data.forEach(category => {
+          // Ensure category has an id and name
+          if (category && category.id && category.name) {
+            const option = document.createElement("option");
+            option.value = category.id;
+            option.textContent = category.name;
+            categorySelect.appendChild(option);
+          }
+        });
+
+        // Check if any options were added
+        if (categorySelect.options.length <= 1) {
+          console.warn("No valid categories found in the response");
+        }
+      } else {
+        console.warn("No categories data received or data is not in expected format", data);
+      }
+    })
+    .catch((error) => {
+      console.error("Error loading categories:", error);
+
+      // Optional: Add an error option to the select
+      const errorOption = document.createElement("option");
+      errorOption.textContent = "Error loading categories";
+      errorOption.value = "";
+      categorySelect.appendChild(errorOption);
+    });
 }
 
 // Initialize all products related functionality
@@ -304,6 +489,8 @@ document.querySelectorAll(".order-product-btn").forEach((button) => {
 
 // Open modal for adding a new product
 function openAddProductModal() {
+ // fetch()
+ loadCategories()
   resetProductForm();
   document.getElementById("productModalTitle").textContent = "Add New Product";
   document.getElementById("_method").value = "POST";
@@ -481,36 +668,89 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // Handle product ordering
-function handleProductOrder(productId) {
-  // Create and show a custom dialog instead of using browser prompt
+function handleProductOrder(productId, element) {
   const quantityDialog = document.createElement('dialog');
+
   quantityDialog.innerHTML = `
-    <div class="dialog-content">
-      <h3>Order Product</h3>
-      <p>Please enter the quantity you wish to order:</p>
-      <input type="number" id="quantity-input" min="1" value="1">
+    <style>
+      dialog {
+        border: none;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        font-family: Arial, sans-serif;
+        width: 300px;
+      }
+      h3 {
+        margin-top: 0;
+        font-size: 18px;
+        text-align: center;
+      }
+      input[type="number"] {
+        width: 100%;
+        padding: 8px;
+        font-size: 16px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .dialog-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 15px;
+      }
+      .dialog-buttons button {
+        padding: 8px 16px;
+        font-size: 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+      #confirm-btn {
+        background-color: #28a745;
+        color: white;
+      }
+      #confirm-btn:hover {
+        background-color: #218838;
+      }
+      #cancel-btn {
+        background-color: #dc3545;
+        color: white;
+      }
+      #cancel-btn:hover {
+        background-color: #c82333;
+      }
+    </style>
+
+    <form method="dialog">
+      <h3>Enter Quantity</h3>
+      <input id="quantity-input" type="number" min="1" value="1" />
       <div class="dialog-buttons">
-        <button id="cancel-btn">Cancel</button>
-        <button id="confirm-btn">Confirm Order</button>
+        <button type="button" id="cancel-btn">Cancel</button>
+        <button type="button" id="confirm-btn">Confirm</button>
       </div>
-    </div>
+    </form>
   `;
+
   document.body.appendChild(quantityDialog);
   quantityDialog.showModal();
 
-  // Handle dialog button clicks
-  document.getElementById('cancel-btn').addEventListener('click', () => {
+  const quantityInput = quantityDialog.querySelector('#quantity-input');
+
+  quantityDialog.querySelector('#cancel-btn').addEventListener('click', () => {
     quantityDialog.close();
     document.body.removeChild(quantityDialog);
   });
 
-  document.getElementById('confirm-btn').addEventListener('click', () => {
-    const quantity = document.getElementById('quantity-input').value;
+  quantityDialog.querySelector('#confirm-btn').addEventListener('click', () => {
+    const quantity = parseInt(quantityInput.value);
     quantityDialog.close();
     document.body.removeChild(quantityDialog);
 
-    if (quantity && !isNaN(quantity) && parseInt(quantity) > 0) {
-      processOrder(productId, parseInt(quantity));
+    if (quantity && quantity > 0) {
+      processOrder(productId, quantity);
     } else {
       alert('Please enter a valid quantity');
     }

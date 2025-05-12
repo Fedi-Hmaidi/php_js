@@ -28,9 +28,10 @@ try {
     $createdAt = date('Y-m-d H:i:s');
 
     // Save user with inactive status
-    $stmt = $pdo->prepare("INSERT INTO users (username, email, phone_number, address, is_active, activation_token, token_created_at,password)
-                            VALUES (?, ?, ?, ?, FALSE, ?, ?, null)");
-    $stmt->execute([$username, $email, $phone, $address, $token, $createdAt]);
+// Save user with inactive status and default role 'user'
+$stmt = $pdo->prepare("INSERT INTO users (username, email, phone_number, address, is_active, activation_token, token_created_at, password, role)
+                       VALUES (?, ?, ?, ?, FALSE, ?, ?, null, ?)");
+$stmt->execute([$username, $email, $phone, $address, $token, $createdAt, 'user']);
 
     // Send email using PHPMailer
     $activationLink = "http://localhost:8000/activate.php?token=$token"; // Adjust URL as needed

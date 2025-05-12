@@ -49,10 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     echo json_encode(["success" => true, "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
     exit;
 }
-
 // POST: Create product
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check if this is actually a PUT or DELETE request using POST method override
     $method = $_POST['_method'] ?? '';
 
     if ($method === 'PUT') {
@@ -68,10 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim($_POST['description'] ?? '');
     $quantity = intval($_POST['quantity'] ?? 0);
     $unit_price = floatval($_POST['unit_price'] ?? 0);
+    $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : null;
 
     // Validate input
-    if (!$name || $quantity < 0 || $unit_price < 0) {
-        echo json_encode(["success" => false, "message" => "Name, quantity, and unit price are required and must be valid."]);
+    if (!$name || $quantity < 0 || $unit_price < 0 || $category_id === null || $category_id <= 0) {
+        echo json_encode(["success" => false, "message" => "Name, quantity, unit price, and category_id are required and must be valid."]);
         exit;
     }
 
@@ -86,9 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $image_url = $result['secure_url'] ?? null;
         }
 
-        // Insert into DB
-        $stmt = $pdo->prepare("INSERT INTO products (name, description, quantity, unit_price, image_url) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $description, $quantity, $unit_price, $image_url]);
+        // Insert into DB (now includes category_id)
+        $stmt = $pdo->prepare("INSERT INTO products (name, description, quantity, unit_price, image_url, category_id) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $description, $quantity, $unit_price, $image_url, $category_id]);
+
         echo json_encode([
             "success" => true,
             "message" => "Product added successfully.",

@@ -191,43 +191,60 @@ function loadDashboardContent() {
             </div>
         </div>
     `;
-}
-
-// Profile content placeholder
+}// Fetch the current user profile and load the content
 function loadProfileContent() {
-    document.getElementById('mainContent').innerHTML = `
-        <div style="padding: 20px;">
-            <h1>User Profile</h1>
-            <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 600px; margin: 0 auto;">
-                <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                    <div style="width: 100px; height: 100px; background-color: #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; margin-right: 20px;">
-                        U
+  fetch('user_info.php')
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const user = data.user;
+        const initials = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+
+        document.getElementById('mainContent').innerHTML = `
+            <div style="padding: 20px;">
+                <h1>User Profile</h1>
+                <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 600px; margin: 0 auto;">
+                    <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                        <div style="width: 100px; height: 100px; background-color: #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; margin-right: 20px;">
+                            ${initials}
+                        </div>
+                        <div>
+                            <h2 style="margin: 0;">${user.username}</h2>
+                            <p style="margin: 5px 0; color: #777;">${user.role}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 style="margin: 0;">User Name</h2>
-                        <p style="margin: 5px 0; color: #777;">Administrator</p>
-                    </div>
+                    <form id="profileForm">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Email</label>
+                            <input type="email" value="${user.email}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Full Name</label>
+                            <input type="text" value="${user.user_name}" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Password</label>
+                            <input type="password" value="" placeholder="Enter new password" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                        </div>
+                        <button type="button" onclick="updateProfile()" style="padding: 8px 16px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Update Profile
+                        </button>
+                    </form>
                 </div>
-                <form>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Email</label>
-                        <input type="email" value="user@example.com" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Full Name</label>
-                        <input type="text" value="User Name" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Password</label>
-                        <input type="password" value="********" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
-                    <button type="button" style="padding: 8px 16px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Update Profile
-                    </button>
-                </form>
             </div>
-        </div>
-    `;
+        `;
+      } else {
+        document.getElementById('mainContent').innerHTML = `
+          <p>${data.message}</p>
+        `;
+      }
+    })
+    .catch(err => {
+      console.error("Error fetching user data:", err);
+      document.getElementById('mainContent').innerHTML = `
+        <p>Error loading profile. Please try again later.</p>
+      `;
+    });
 }
 
 // Settings content placeholder
